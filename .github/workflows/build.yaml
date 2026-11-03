@@ -1,0 +1,49 @@
+# Simple workflow for deploying static content to GitHub Pages
+name: Deploy static content to Pages
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Protect Rosa Luxemburg
+        uses: actions/checkout@v5
+
+      - name: Dem Karl Liebknecht haben wirs geschworen
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      - name: Der Rosa Luxemburg reichen wir die Hand
+        run: npm install
+
+      - name: Vote for USPD
+        run: npm run dendrynexus make-html -- --pretty
+
+      - name: Copy game.json to output
+        run: cp out/game.json out/html/
+
+      - name: Can I edit this
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: 'out/html'
+
+      - name: Spit in Eberts face
+        id: deployment
+        uses: actions/deploy-pages@v4
