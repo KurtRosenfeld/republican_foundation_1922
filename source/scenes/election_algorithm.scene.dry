@@ -1,0 +1,118 @@
+title: Election
+on-arrival: {!
+// calculate normalized class voting amounts (0 to 100)
+for (var c of Q.classes) {
+    var class_votes = 0;
+    for (var party of Q.parties) {
+        if (Q[c+'_'+party] < 0) {
+            Q[c+'_'+party] = 0;
+        }
+        class_votes += Q[c+'_'+party];
+    }
+    for (var party of Q.parties) {
+        Q[c + '_' + party + '_normalized'] = 100*Q[c+'_'+party]/class_votes;
+        Q[c + '_' + party + '_display'] = Math.round(100*Q[c+'_'+party]/class_votes);
+    }
+}
+
+// 1. calculate support for each of the parties
+var total_support = 0;
+for (var party of Q.parties) {
+    var party_support = 0;
+    for (var c of Q.classes) {
+        // but this version is somewhat more entertaining and allows for wilder swings in votes.
+        // the other option basically necessitates a multi-class strategy. while the first option allows for a working-class-only strategy.
+        if (Q.old_demographics) {
+            // okay i'm pretty sure this is wrong, and the hard version is correct
+            // basically this allows for "spillover" effects in other demographics.
+            // so you can campaign among say the workers and 
+            party_support += Q[c]*Q[c+'_'+party];
+            // However, there should be a cap on how much party support you can get in a certain demo.
+        } else  {
+            party_support += Q[c]*Q[c+'_'+party+'_normalized'];
+        }
+    }
+    Q[party + '_support'] = party_support;
+    total_support += party_support;
+    if (party == "other") {
+        if (Q.cnblp_exists) Q.cnblp_normalized = Q.rur_cnbl;
+        Q.wp_normalized = (Q.new_wp + Q.old_wp);
+        if (Q.csvd_formed && !Q.aspd_other) Q.csvd_normalized = (Q.wor_csvd + Q.un_csvd);
+        Q.dbp_normalized = (Q.rur_dbp + Q.cat_dbp);
+        Q.dhp_normalized = (Q.rur_dhp + Q.new_dhp + Q.old_dhp + Q.wor_dhp);
+        Q.lb_normalized = (Q.rur_lb);
+        Q.vrp_normalized = (Q.new_vrp + Q.old_vrp)
+        if (Q.aspd_other) Q.aspd_normalized = (Q.wor_aspd + Q.un_aspd + Q.new_aspd);
+        if (Q.aspd_kvp) Q.aspd_normalized = (Q.workers_kvp_normalized*Q.workers) + (Q.unemployed_kvp_normalized*Q.unemployed);
+        if (Q.right_dnef) Q.right_dnef_normalized = ((Q.new_middle_dnef_normalized / 2)*Q.new_middle) + (Q.old_middle_dnef_normalized*Q.old_middle) + (Q.rural_dnef_normalized*Q.rural) + ((Q.catholics_dnef_normalized / 2)*Q.catholics);
+        if (Q.left_dnef) Q.left_dnef_normalized = ((Q.new_middle_dnef_normalized / 2)*Q.new_middle) + (Q.workers_dnef_normalized*Q.workers) + (Q.unemployed_dnef_normalized*Q.unemployed) + ((Q.catholics_dnef_normalized / 2)*Q.catholics);
+    }
+    if (party == "nsdap" && Q.nsdap_split) {
+        Q.nsdap_hitler_support = Q.rural_nsdap_normalized*Q.rural;
+        Q.nsdap_hitler_support += Q.old_middle_nsdap_normalized*Q.old_middle;
+        Q.nsdap_hitler_support += Q.catholics_nsdap_normalized*Q.catholics;
+
+        if (Q.dsu_exist && !Q.nvf_exist) {
+            Q.dsu_support = Q.workers_nsdap*Q.workers*((120 - Q.sa_force) / 100);
+            Q.dsu_support += Q.unemployed_nsdap*Q.unemployed*((80 - Q.sa_force) / 100);
+            Q.dsu_support += Q.new_middle_nsdap*Q.new_middle;
+        } else if (!Q.dsu_exist && Q.nvf_exist) {
+            Q.nvf_support = Q.unemployed_nsdap*Q.unemployed*((120 - Q.sa_force) / 100);
+            Q.nvf_support += Q.workers_nsdap*Q.workers*((Q.sa_force - 80) / 100);
+            Q.nvf_support += Q.new_middle_nsdap*Q.new_middle;
+        } else if (Q.dsu_exist && Q.nvf_exist) {
+            Q.dsu_support = Q.workers_nsdap*Q.workers*((120 - Q.sa_force) / 100);
+            Q.dsu_support += Q.unemployed_nsdap*Q.unemployed*((80 - Q.sa_force) / 100);
+            Q.dsu_support += Q.new_middle_nsdap*Q.new_middle;
+
+            Q.nvf_support = Q.unemployed_nsdap*Q.unemployed*((120 - Q.sa_force) / 100);
+            Q.nvf_support += Q.workers_nsdap*Q.workers*((Q.sa_force - 80) / 100);
+        } else {
+            Q.nsdap_hitler_support += Q.workers_nsdap*Q.workers;
+            Q.nsdap_hitler_support += Q.unemployed_nsdap*Q.unemployed;
+            Q.nsdap_hitler_support += Q.new_middle_nsdap*Q.new_middle;
+        }
+    }
+}
+// 2. normalize support (fraction)
+// 3. Round to integers
+for (var party of Q.parties) {
+    Q[party+'_normalized'] = Q[party + '_support']/total_support;
+    if (party == "other") {
+        Q.cnblp_votes = (Q.cnblp_normalized/total_support);
+        Q.wp_votes = (Q.wp_normalized/total_support);
+        Q.dbp_votes = (Q.dbp_normalized/total_support);
+        Q.dhp_votes = (Q.dhp_normalized/total_support);
+        Q.lb_votes = (Q.lb_normalized/total_support);
+        Q.vrp_votes = (Q.vrp_normalized/total_support);
+        if (Q.csvd_formed && !Q.aspd_other) Q.csvd_votes = (Q.csvd_normalized/total_support);
+        if (Q.aspd_other || Q.aspd_kvp) Q.aspd_votes = (Q.aspd_normalized/total_support);
+        if (Q.right_dnef) Q.right_dnef_votes = (Q.right_dnef_normalized/total_support);
+        if (Q.left_dnef) Q.left_dnef_votes = (Q.left_dnef_normalized/total_support);
+    }
+    if (party == "nsdap" && Q.nsdap_split) {
+        Q.nsdap_hitler_normalized = Q.nsdap_hitler_support / total_support;
+        Q.dsu_normalized = Q.dsu_support / total_support;
+        if (Q.nvf_exist) Q.nvf_normalized = Q.nvf_support / total_support;
+        Q.nsdap_hitler_votes = Math.round(Q.nsdap_hitler_normalized*1000) / 10;
+        Q.dsu_votes = Math.round(Q.dsu_normalized*1000) / 10;
+        if (Q.nvf_exist) Q.nvf_votes = Math.round(Q.nvf_normalized*1000) / 10;
+    }
+    Q[party+'_votes'] = Math.round(Q[party+'_normalized']*1000)/ 10;
+    if (party == "other") {
+        Q.cnblp_votes = Math.round((Q.cnblp_votes*1000)/10);
+        Q.wp_votes = Math.round(Q.wp_votes*1000)/10;
+        Q.dhp_votes = Math.round(Q.dhp_votes*1000)/10;
+        Q.dbp_votes = Math.round(Q.dbp_votes*1000)/10;
+        Q.lb_votes = Math.round(Q.lb_votes*1000)/10;
+        Q.vrp_votes = Math.round(Q.vrp_votes*1000)/10;
+        if (Q.csvd_formed && !Q.aspd_other) Q.csvd_votes = Math.round((Q.csvd_votes*1000)/10);
+        if (Q.aspd_other || Q.aspd_kvp) Q.aspd_votes = Math.round((Q.aspd_votes*1000)/10);
+        if (Q.right_dnef) Q.right_dnef_votes = Math.round((Q.right_dnef_votes*1000)/10);
+        if (Q.left_dnef) Q.left_dnef_votes = Math.round((Q.left_dnef_votes*1000)/10);
+    }
+}
+!}
+go-to: jumpScene
+
+# note: this is a helpful utility to deal with elections and so on.
