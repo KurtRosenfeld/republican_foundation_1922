@@ -1,4 +1,4 @@
-title: Next month
+title: main
 is-hand: true
 on-arrival: {!
 if (!Q.rubicon) {
